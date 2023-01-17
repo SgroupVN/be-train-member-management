@@ -57,4 +57,25 @@ router.post("/", function (req, res, next) {
   return res.status(201).json(allUsers);
 });
 
+// Update one user
+router.patch("/:id", function (req, res, next) {
+  const userId = parseInt(req.params.id, 10);
+  const user = allUsers.find((user) => user.id === userId);
+  const name = req.body.name;
+  const age = req.body.age;
+  const gender = req.body.gender;
+
+  if (!user) {
+    return res.status(404).json({
+      message: "User not found",
+    });
+  }
+
+  user.name = name;
+  user.age = age;
+  user.gender = gender;
+
+  return res.json(allUsers);
+});
+
 module.exports = router;
