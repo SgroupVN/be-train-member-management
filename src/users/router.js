@@ -34,4 +34,27 @@ router.get("/:id", function (req, res, next) {
   return res.json(user);
 });
 
+// Create one user
+router.post("/", function (req, res, next) {
+  const name = req.body.name;
+  const age = req.body.age;
+  const gender = req.body.gender;
+  const shouldAddUser = Boolean(name && age && gender);
+
+  if (shouldAddUser) {
+    allUsers.push({
+      id: 4,
+      name,
+      age,
+      gender,
+    });
+  } else {
+    return res.status(400).json({
+      message: "Missing some stuffs bro",
+    })
+  }
+
+  return res.status(201).json(allUsers);
+});
+
 module.exports = router;
