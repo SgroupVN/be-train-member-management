@@ -78,4 +78,12 @@ router.patch("/:id", function (req, res, next) {
   return res.json(allUsers);
 });
 
+// Delete one user
+router.delete("/:id", function (req, res, next) {
+  const userId = parseInt(req.params.id, 10);
+
+  const removedUser = allUsers.filter((user) => user.id != userId);
+  return res.json(removedUser);
+});
+
 module.exports = router;
