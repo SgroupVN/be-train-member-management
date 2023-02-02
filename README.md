@@ -1,6 +1,11 @@
 # Training member management
 
-## Agenda
+## Install
+- `npm install`
+- Create .env to config server and Database (check .env_example)
 
-- Target
-- How to run
+## Init database
+- `npm run init_db`
+
+## Start server
+- `npm start`

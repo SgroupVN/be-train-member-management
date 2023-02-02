@@ -1,5 +1,5 @@
 const express = require("express");
-
+const db = require("../database/connection.js")
 const router = express.Router();
 
 const allUsers = [
@@ -12,78 +12,109 @@ const allUsers = [
 router.get("/", function (req, res, next) {
   const nameQuery = req.query.name;
 
+  // Search by name
   if (nameQuery) {
-    const filteredUser = allUsers.filter((user) => user.name.includes(nameQuery));
-    return res.json(filteredUser);
+    // const filteredUser = allUsers.filter((user) => user.name.includes(nameQuery));
+    const sql = "SELECT * FROM user WHERE name LIKE ?"
+    db.query(sql, ["%" + nameQuery + "%"], (err, rows) => {
+      if (err) {
+        return res.status(500).json({ "message": "Error when connect to mysql" })
+      }
+      res.json(rows)
+    })
+    return;
   }
-
-  return res.json(allUsers);
+  // Get all
+  const sql = "SELECT * FROM user"
+  db.query(sql, [nameQuery], (err, rows) => {
+    if (err) {
+      return res.status(500).json({ "message": "Error when connect to mysql" })
+    }
+    res.json(rows)
+  })
 });
 
 // Read one user
 router.get("/:id", function (req, res, next) {
   const userId = parseInt(req.params.id, 10);
-  const user = allUsers.find((user) => user.id === userId);
 
-  if (!user) {
-    return res.status(404).json({
-      message: "User not found",
-    });
-  }
+  const sql = "SELECT * FROM user WHERE id = ?"
+  db.query(sql, [userId], (err, rows) => {
+    if (err) {
+      return res.status(500).json({ "message": "Error when connect to mysql" })
+    }
+    if (rows.length == 0) {
+      return res.status(404).json({
+        message: "User not found",
+      });
+    }
+    return res.json(rows[0]);
+  })
 
-  return res.json(user);
 });
 
 // Create one user
-router.post("/", function (req, res, next) {
+router.post("/", function (req, res) {
   const name = req.body.name;
   const age = req.body.age;
-  const gender = req.body.gender;
-  const shouldAddUser = Boolean(name && age && gender);
+  const gender = Boolean(req.body.gender);
+  const shouldAddUser = Boolean(name != undefined && age != undefined && gender != undefined);
 
   if (shouldAddUser) {
-    allUsers.push({
-      id: 4,
-      name,
-      age,
-      gender,
-    });
+    const sql = "INSERT INTO user(name, age, gender) VALUES(?, ?, ?)"
+    db.query(sql, [name, age, gender], (err, results) => {
+      if (err) {
+        return res.status(400).json({ "message": "Error when insert data" })
+      }
+      return res.json(results)
+
+    })
   } else {
     return res.status(400).json({
       message: "Missing some stuffs bro",
     })
   }
-
-  return res.status(201).json(allUsers);
 });
 
 // Update one user
-router.patch("/:id", function (req, res, next) {
+router.patch("/:id", function (req, res) {
   const userId = parseInt(req.params.id, 10);
-  const user = allUsers.find((user) => user.id === userId);
+  // const user = allUsers.find((user) => user.id === userId);
   const name = req.body.name;
   const age = req.body.age;
-  const gender = req.body.gender;
+  const gender = Boolean(req.body.gender);
 
-  if (!user) {
-    return res.status(404).json({
-      message: "User not found",
-    });
-  }
-
-  user.name = name;
-  user.age = age;
-  user.gender = gender;
-
-  return res.json(allUsers);
+  const sql = "SELECT * FROM user WHERE id = ?"
+  db.query(sql, [userId], (err, rows) => {
+    if (err) {
+      return res.status(500).json({ "message": "Error when connect to mysql" })
+    }
+    if (rows.length == 0) {
+      return res.status(404).json({
+        message: "User not found",
+      });
+    }
+    const sql = "Update user set name=?,age=?,gender=? where id=?";
+    db.query(sql, [name, age, gender, userId], (err, results) => {
+      if (err) {
+        return res.status(400).json({ "message": "Error when update data" })
+      }
+      return res.json(results)
+    })
+  })
 });
 
 // Delete one user
-router.delete("/:id", function (req, res, next) {
+router.delete("/:id", function (req, res) {
   const userId = parseInt(req.params.id, 10);
 
-  const removedUser = allUsers.filter((user) => user.id != userId);
-  return res.json(removedUser);
+  const sql = "Delete from user where id=?"
+  db.query(sql, [userId], (err, result) => {
+    if (err) {
+      return res.status(400).json({ "message": "Error when update data" })
+    }
+    return res.json(result)
+  })
 });
 
 module.exports = router;
