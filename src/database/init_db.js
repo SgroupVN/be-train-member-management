@@ -10,9 +10,9 @@ db.query(create_sql, (err, result) => {
         db.query(seed_sql, (err, result) => {
             if (err){
                 console.log(err);
-            } else {
-                console.log("Success init database...")
-            }
+                return;
+            } 
+            console.log("Success init database...")
         })
     }
 })
