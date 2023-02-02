@@ -14,7 +14,6 @@ router.get("/", function (req, res, next) {
 
   // Search by name
   if (nameQuery) {
-    // const filteredUser = allUsers.filter((user) => user.name.includes(nameQuery));
     const sql = "SELECT * FROM user WHERE name LIKE ?"
     db.query(sql, ["%" + nameQuery + "%"], (err, rows) => {
       if (err) {
@@ -94,7 +93,7 @@ router.patch("/:id", function (req, res) {
         message: "User not found",
       });
     }
-    const sql = "Update user set name=?,age=?,gender=? where id=?";
+    const sql = "UPDATE user SET name=?,age=?,gender=? where id=?";
     db.query(sql, [name, age, gender, userId], (err, results) => {
       if (err) {
         return res.status(400).json({ "message": "Error when update data" })
@@ -108,7 +107,7 @@ router.patch("/:id", function (req, res) {
 router.delete("/:id", function (req, res) {
   const userId = parseInt(req.params.id, 10);
 
-  const sql = "Delete from user where id=?"
+  const sql = "DELETE from user WHERE id=?"
   db.query(sql, [userId], (err, result) => {
     if (err) {
       return res.status(400).json({ "message": "Error when update data" })
