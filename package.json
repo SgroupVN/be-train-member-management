@@ -4,7 +4,21 @@
   "private": true,
   "scripts": {
     "start": "nodemon ./src/app",
-    "init_db": "node ./src/database/init_db.js"
+    "init_db": "node src/database/init-db.js",
+    "prepare": "husky install",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "prettier": "prettier --check **/*.js",
+    "prettier:fix": "prettier --write **/*.js"
+  },
+  "keywords": [
+    "node",
+    "s-group",
+    "training"
+  ],
+  "engines": {
+    "node": "v16.16.0",
+    "npm": "8.11.0"
   },
   "dependencies": {
     "body-parser": "^1.20.1",
@@ -13,6 +27,17 @@
     "mysql": "^2.18.1"
   },
   "devDependencies": {
-    "nodemon": "^2.0.20"
+    "@commitlint/cli": "^17.4.2",
+    "@commitlint/config-conventional": "^17.4.2",
+    "husky": "^8.0.3",
+    "nodemon": "^2.0.20",
+    "eslint": "^7.0.0",
+    "prettier": "^2.0.5",
+    "eslint-config-airbnb-base": "^14.0.0",
+    "eslint-config-prettier": "^8.1.0",
+    "eslint-plugin-import": "^2.18.2",
+    "eslint-plugin-jest": "^24.0.1",
+    "eslint-plugin-prettier": "^3.1.1",
+    "eslint-plugin-security": "^1.4.0"
   }
 }
