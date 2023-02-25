@@ -1,9 +1,11 @@
 const express = require('express');
 const crypto = require('crypto');
+const bcrypt = require('bcrypt');
 const jsonwebtoken = require('jsonwebtoken');
 
 const db = require('../database/connection');
-const { getOne } = require('../database/query');
+const { getOne, updateOne } = require('../database/query');
+const { mailService } = require('../services/mail.service');
 
 const router = express.Router();
 
@@ -27,7 +29,7 @@ router.post('/login', async function (req, res) {
     const user = await getOne({
       db,
       query: 'SELECT * FROM user WHERE username = ?',
-      params: username,
+      params: [username],
     });
 
     if (!user) {
@@ -64,6 +66,95 @@ router.post('/login', async function (req, res) {
 
     return res.status(401).json({
       message: 'invalid credentials',
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: 'error',
+    });
+  }
+});
+
+router.post('/forgot-password', async function (req, res) {
+  try {
+    const { email } = req.body;
+
+    const user = await getOne({
+      db,
+      query: 'SELECT * FROM user WHERE email = ?',
+      params: [email],
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        message: 'Email not found',
+      });
+    }
+
+    const secretKey = crypto.randomBytes(32).toString('hex');
+    const passwordResetToken = crypto.createHash('sha256').update(secretKey).digest('hex');
+
+    const passwordResetAt = new Date(Date.now() + 10 * 60 * 1000);
+    const updateStatus = await updateOne({
+      db,
+      query: 'update user set passwordResetToken = ?, passwordResetAt = ? where email = ?',
+      params: [passwordResetToken, passwordResetAt, email],
+    });
+
+    if (updateStatus) {
+      mailService.sendEmail({
+        emailFrom: 'admin@gmail.com',
+        emailTo: email,
+        emailSubject: 'Reset password',
+        emailText: 'Here is your reset password token: ' + passwordResetToken,
+      });
+
+      return res.status(200).json({
+        message: 'reset password email sent successfully',
+      });
+    }
+
+    return res.status(400).json({
+      message: "can't reset password!",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: 'error',
+    });
+  }
+});
+
+router.post('/reset-password', async function (req, res) {
+  try {
+    const { email, passwordResetToken, newPassword } = req.body;
+    const user = await getOne({
+      db,
+      query: 'SELECT * FROM user WHERE email = ? AND passwordResetToken = ? AND passwordResetAt > ?',
+      params: [email, passwordResetToken, new Date()],
+    });
+
+    if (!user) {
+      return res.status(403).json({
+        message: 'invalid token or token has expired',
+      });
+    }
+
+    const salt = crypto.randomBytes(32).toString('hex');
+    const hashedPassword = crypto.pbkdf2Sync(newPassword, salt, 10, 64, `sha512`).toString(`hex`);
+
+    const updateStatus = await updateOne({
+      db,
+      query: 'update user set password = ?, salt = ?, passwordResetToken = null, passwordResetAt = null where email = ?',
+      params: [hashedPassword, salt, email],
+    });
+
+    if (updateStatus) {
+      return res.status(200).json({
+        message: 'reset password successfully',
+      });
+    }
+
+    return res.status(400).json({
+      message: 'reset password failed',
     });
   } catch (error) {
     return res.status(500).json({
