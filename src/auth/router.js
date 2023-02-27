@@ -1,18 +1,21 @@
 const express = require('express');
 const crypto = require('crypto');
-const bcrypt = require('bcrypt');
 const jsonwebtoken = require('jsonwebtoken');
 
 const db = require('../database/connection');
-const { getOne, updateOne } = require('../database/query');
+const auth = require('../middlewares/auth');
+const { getOne, updateOne, getMany } = require('../database/query');
 const { mailService } = require('../services/mail.service');
+const permissionCode = require('../constants/permission-code');
 
 const router = express.Router();
 
-const getUserCredentials = ({ id, username }) => {
+const getUserCredentials = ({ id, username, roles, permissions }) => {
   const jwtData = {
     id,
     username,
+    roles,
+    permissions
   };
 
   const jwtSecret = process.env.JWT_SECRET;
@@ -51,9 +54,23 @@ router.post('/login', async function (req, res) {
     });
 
     if (isPasswordValid) {
+      const rolePermissions = await getMany({
+        db,
+        query:
+          'SELECT r.code AS role, p.code AS permission \
+        FROM role r JOIN user_role ur ON r.id = ur.RoleId LEFT JOIN role_permission rp ON r.id = rp.roleId LEFT JOIN permission p ON rp.permissionId = p.id \
+        WHERE ur.userId = ?',
+        params: user.id,
+      });
+
+      const roles = Array.from(new Set(rolePermissions.map((item) => item.role)));
+      const permissions = Array.from(new Set(rolePermissions.filter(item => item.permission != null).map((item) => item.permission)));
+
       const token = getUserCredentials({
         id: user.id,
         username,
+        roles,
+        permissions
       });
 
       return res.status(200).json({
@@ -72,6 +89,12 @@ router.post('/login', async function (req, res) {
       message: 'error',
     });
   }
+});
+
+router.get('/authorization-test', auth(permissionCode.TEST_R, permissionCode.TEST_C), async function (req, res) {
+  return res.status(200).json({
+    message: 'test authorization successfully',
+  });
 });
 
 router.post('/forgot-password', async function (req, res) {
