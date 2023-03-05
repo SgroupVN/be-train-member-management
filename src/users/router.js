@@ -1,5 +1,7 @@
 const express = require('express');
 const db = require('../database/connection');
+const { getMany } = require('../database/query');
+const { executeQuery, getOne, executeTransaction } = require('../database/query');
 
 const router = express.Router();
 
@@ -115,3 +117,40 @@ router.delete('/:id', function (req, res) {
 });
 
 module.exports = router;
+
+// Assign role to user
+router.post('/:id/assign-role', async function (req, res) {
+  try {
+    const userId = parseInt(req.params.id, 10);
+    const { roles } = req.body;
+
+    const user = await getOne({
+      db,
+      query: 'SELECT * FROM user WHERE id = ?',
+      params: [userId],
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        message: 'User not found',
+      });
+    }
+
+    roleParmas = roles.map((x) => [user.id, x.id]);
+
+    await executeTransaction({
+      db: db,
+      queries: [
+        { query: 'delete from user_role where userId = ?', params: [user.id] },
+        { query: 'insert into user_role (userId, roleId) VALUES ?', params: [roleParmas] },
+      ],
+    });
+
+    return res.status(200).json({ 
+      message: 'login success',
+    });
+  } catch (err) {
+    console.log(err);
+    return res.status(400).json({ message: 'Error when update data' });
+  }
+});
