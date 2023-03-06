@@ -28,15 +28,22 @@ db.query(creatSql, (err) => {
 /* 
 CREATE TABLE role(id INT NOT NULL AUTO_INCREMENT, code NVARCHAR(255) NOT NULL, description NVARCHAR(500), PRIMARY KEY (id), UNIQUE(code))
 
-CREATE TABLE permission(id INT NOT NULL AUTO_INCREMENT, code NVARCHAR(255) NOT NULL, description NVARCHAR(500), PRIMARY KEY (id), UNIQUE(code))
+CREATE TABLE user_role (roleId INT NOT NULL, userId INT NOT NULL, PRIMARY KEY (roleId, userId), FOREIGN KEY (roleId) REFERENCES role(id), FOREIGN KEY (userId) REFERENCES user(id))
 
-CREATE TABLE role_permission(roleId INT NOT NULL, permissionId INT NOT NULL, PRIMARY KEY (roleId, permissionId))
+CREATE TABLE permission_group (id INT NOT NULL AUTO_INCREMENT, description NVARCHAR(500) NOT NULL, PRIMARY KEY (id))
 
-CREATE TABLE user_role (roleId INT NOT NULL, userId INT NOT NULL, PRIMARY KEY (roleId, userId))
+CREATE TABLE permission(id INT NOT NULL AUTO_INCREMENT, code NVARCHAR(255) NOT NULL, description NVARCHAR(500), groupId INT NOT NULL, PRIMARY KEY (id), UNIQUE(code), FOREIGN KEY (groupId) REFERENCES permission_group(id))
+
+CREATE TABLE role_permission(roleId INT NOT NULL, permissionId INT NOT NULL, PRIMARY KEY (roleId, permissionId), FOREIGN KEY (permissionId) REFERENCES premission(id), FOREIGN KEY (roleId) REFERENCES role(id))
 
 
-INSERT INTO role(code) VALUES('admin'), ('staff')
-INSERT INTO permission(code) VALUES ('Test:R')
-INSERT INTO user_role(roleId, userId) VALUES (1, 1)
-INSERT INTO role_permission(roleId, permissionId) VALUES(1, 1)
+INSERT INTO role(code) VALUES('admin'), ('staff');
+INSERT INTO user_role(roleId, userId) VALUES (1, 1);
+INSERT INTO permission_group(description) VALUES ('UserManagement');
+INSERT INTO permission_group(description) VALUES ('PostManagement');
+INSERT INTO permission(code, description, groupId) VALUES ('User:R', 'User List Information Read', 1);
+INSERT INTO permission(code, description, groupId) VALUES ('User:C', 'User Create', 1);
+INSERT INTO permission(code, description, groupId) VALUES ('Post:C', 'Post Create', 2);
+INSERT INTO role_permission(roleId, permissionId) VALUES(1, 1);
+INSERT INTO role_permission(roleId, permissionId) VALUES(1, 2);
 */

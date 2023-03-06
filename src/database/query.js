@@ -23,9 +23,6 @@ const executeTransaction = ({ db, queries }) => {
             await promiseQuery(item.query, item.params);
           })
         );
-        // await promiseQuery('delete from user_role where roleId = ?', [2]);
-        // await promiseQuery('insert into role (code) VALUES ("admin")');
-        // await promiseQuery(queries[0].query, queries[0].params);
         conn.commit();
         resolve();
       } catch (error) {
@@ -38,9 +35,9 @@ const executeTransaction = ({ db, queries }) => {
   });
 };
 
-const createMany = async ({ db, query, params }) => {
+const create = async ({ db, query, params }) => {
   const result = await executeQuery({ db, query, params });
-  if (result.affectedRows == params.length) {
+  if (result.affectedRows > 0) {
     return true;
   }
 
@@ -78,4 +75,5 @@ module.exports = {
   updateOne,
   executeQuery,
   executeTransaction,
+  create
 };
