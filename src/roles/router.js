@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../database/connection');
 const { getMany, getOne, executeTransaction, create } = require('../database/query');
+const { cacheService } = require('../services/cache.service');
 
 const router = express.Router();
 
@@ -61,7 +62,7 @@ router.post('/', async function (req, res) {
 });
 
 // assign permissions to role
-router.post('/:id', async function (req, res) {
+router.post('/:id/assign-permission', async function (req, res) {
   try {
     const roleId = parseInt(req.params.id, 10);
     const { permissions } = req.body;
@@ -87,6 +88,14 @@ router.post('/:id', async function (req, res) {
         { query: 'insert into role_permission (roleId, permissionId) VALUES ?', params: [permissionsParams] },
       ],
     });
+
+    const loginedUsers = await cacheService.getAllUser();
+
+    for (const [key, value] of Object.entries(loginedUsers)) {
+      if (value.roles.includes(role.code)) {
+        await cacheService.setOneUser(key);
+      }
+    }
 
     return res.status(200).json({
       message: 'success',

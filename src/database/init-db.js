@@ -40,10 +40,10 @@ CREATE TABLE role_permission(roleId INT NOT NULL, permissionId INT NOT NULL, PRI
 INSERT INTO role(code) VALUES('admin'), ('staff');
 INSERT INTO user_role(roleId, userId) VALUES (1, 1);
 INSERT INTO permission_group(description) VALUES ('UserManagement');
-INSERT INTO permission_group(description) VALUES ('PostManagement');
-INSERT INTO permission(code, description, groupId) VALUES ('User:R', 'User List Information Read', 1);
-INSERT INTO permission(code, description, groupId) VALUES ('User:C', 'User Create', 1);
-INSERT INTO permission(code, description, groupId) VALUES ('Post:C', 'Post Create', 2);
+INSERT INTO permission_group(description) VALUES ('RoleManagement');
+INSERT INTO permission(code, description, groupId) VALUES ('CanReadUser', 'User List Information Read', 1);
+INSERT INTO permission(code, description, groupId) VALUES ('CanCreateUser', 'User Create', 1);
+INSERT INTO permission(code, description, groupId) VALUES ('CanCreateRole', 'Role Create', 2);
 INSERT INTO role_permission(roleId, permissionId) VALUES(1, 1);
 INSERT INTO role_permission(roleId, permissionId) VALUES(1, 2);
 */

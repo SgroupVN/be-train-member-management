@@ -1,22 +1,38 @@
 const jwt = require('jsonwebtoken');
+const { cacheService } = require('../services/cache.service');
 require('dotenv').config();
 
-const auth = (...allowedPermissions) => {
-  return (req, res, next) => {
+const canAccessBy = (...allowedPermissions) => {
+  return async (req, res, next) => {
     const authHeader = req.headers['authorization'];
-    if (!authHeader) return res.sendStatus(401);
-    console.log(authHeader); // Bearer token
+
+    if (!authHeader) {
+      return res.sendStatus(401);
+    }
+
     const token = authHeader.split(' ')[1];
-    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-      if (err) return res.sendStatus(401); //invalid token
-      if (!decoded.permissions) return res.sendStatus(403);
+
+    await jwt.verify(token, process.env.JWT_SECRET, async (err, decoded) => {
+      if (err) {
+        return res.sendStatus(401); // invalid token
+      }
+
+      const userCache = await cacheService.getOneUser(decoded.id);
+      
+      if (!userCache || !userCache.permissions) {
+        return res.sendStatus(403); // unauthorized
+      }
+
       const permissionArray = [...allowedPermissions];
-      const result = decoded.permissions.map((item) => permissionArray.includes(item)).find((val) => val === true);
-      if (!result) return res.sendStatus(403);
-      req.user = decoded.username;
+      const result = userCache.permissions.map((item) => permissionArray.includes(item)).find((val) => val === true);
+
+      if (!result) {
+        return res.sendStatus(403);
+      }
+
       next();
     });
   };
 };
 
-module.exports = auth;
+module.exports = canAccessBy;

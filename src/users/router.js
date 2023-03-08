@@ -1,7 +1,7 @@
 const express = require('express');
 const db = require('../database/connection');
-const { getMany } = require('../database/query');
-const { executeQuery, getOne, executeTransaction } = require('../database/query');
+const { getOne, executeTransaction, getMany } = require('../database/query');
+const { cacheService } = require('../services/cache.service');
 
 const router = express.Router();
 
@@ -146,11 +146,32 @@ router.post('/:id/assign-role', async function (req, res) {
       ],
     });
 
-    return res.status(200).json({ 
+    await cacheService.setOneUser(userId);
+
+    return res.status(200).json({
       message: 'login success',
     });
   } catch (err) {
     console.log(err);
     return res.status(400).json({ message: 'Error when update data' });
   }
+});
+
+// read user_role
+router.get('/:id/roles', async function (req, res) {
+  const userId = parseInt(req.params.id, 10);
+
+  const roles = await getMany({
+    db,
+    query:
+      'SELECT ro.id, ro.description from role ro \
+      JOIN user_role ur ON ro.id = ur.roleId \
+      WHERE userId = ?',
+    params: userId,
+  });
+
+  return res.status(200).json({
+    data: roles,
+    message: 'retrieve permissions successfully',
+  });
 });

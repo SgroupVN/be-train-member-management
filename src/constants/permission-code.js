@@ -1,6 +1,6 @@
 const permissionCode = {
-    TEST_R: "Test:R",
-    TEST_C: "Test:C"
+    CanCreateUser: "CanCreateUser",
+    CanReadUser: "CanReadUser"
 }
 
 module.exports = permissionCode
