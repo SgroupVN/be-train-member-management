@@ -144,7 +144,11 @@ router.post('/:id/assign-role', async function (req, res) {
       ],
     });
 
-    await cacheService.setOneUser(userId);
+    const loginedUser = await cacheService.getOneUser(userId);
+
+    if (loginedUser) {
+      await cacheService.setOneUser(userId);
+    }
 
     return res.status(200).json({
       message: 'login success',
