@@ -116,8 +116,6 @@ router.delete('/:id', function (req, res) {
   });
 });
 
-module.exports = router;
-
 // Assign role to user
 router.post('/:id/assign-role', async function (req, res) {
   try {
@@ -175,3 +173,25 @@ router.get('/:id/roles', async function (req, res) {
     message: 'retrieve permissions successfully',
   });
 });
+
+// read user_permission in specific permissionGroup
+router.get('/:userId/permission-group/:groupId/permissions', async function (req, res) {
+  const userId = parseInt(req.params.userId, 10);
+  const groupId = parseInt(req.params.groupId, 10);
+
+  const roles = await getMany({
+    db,
+    query:
+      'SELECT DISTINCT p.code AS permission \
+    FROM role r JOIN user_role ur ON r.id = ur.RoleId LEFT JOIN role_permission rp ON r.id = rp.roleId LEFT JOIN permission p ON rp.permissionId = p.id \
+    WHERE ur.userId = ? AND p.groupId = ?',
+    params: [userId, groupId],
+  });
+
+  return res.status(200).json({
+    data: roles,
+    message: 'retrieve permissions successfully',
+  });
+});
+
+module.exports = router;
