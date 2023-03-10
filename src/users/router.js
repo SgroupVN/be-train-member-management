@@ -1,5 +1,7 @@
 const express = require('express');
 const db = require('../database/connection');
+const { getOne, executeTransaction, getMany } = require('../database/query');
+const { cacheService } = require('../services/cache.service');
 
 const router = express.Router();
 
@@ -111,6 +113,88 @@ router.delete('/:id', function (req, res) {
       return res.status(400).json({ message: 'Error when update data' });
     }
     return res.json(result);
+  });
+});
+
+// Assign role to user
+router.post('/:id/assign-role', async function (req, res) {
+  try {
+    const userId = parseInt(req.params.id, 10);
+    const { roles } = req.body;
+
+    const user = await getOne({
+      db,
+      query: 'SELECT * FROM user WHERE id = ?',
+      params: [userId],
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        message: 'User not found',
+      });
+    }
+
+    roleParmas = roles.map((x) => [user.id, x.id]);
+
+    await executeTransaction({
+      db: db,
+      queries: [
+        { query: 'delete from user_role where userId = ?', params: [user.id] },
+        { query: 'insert into user_role (userId, roleId) VALUES ?', params: [roleParmas] },
+      ],
+    });
+
+    const loginedUser = await cacheService.getOneUser(userId);
+
+    if (loginedUser) {
+      await cacheService.setOneUser(userId);
+    }
+
+    return res.status(200).json({
+      message: 'login success',
+    });
+  } catch (err) {
+    console.log(err);
+    return res.status(400).json({ message: 'Error when update data' });
+  }
+});
+
+// read user_role
+router.get('/:id/roles', async function (req, res) {
+  const userId = parseInt(req.params.id, 10);
+
+  const roles = await getMany({
+    db,
+    query:
+      'SELECT ro.id, ro.description from role ro \
+      JOIN user_role ur ON ro.id = ur.roleId \
+      WHERE userId = ?',
+    params: userId,
+  });
+
+  return res.status(200).json({
+    data: roles,
+    message: 'retrieve permissions successfully',
+  });
+});
+
+// read user_permission in specific permissionGroup
+router.get('/:userId/permission-group/:groupId/permissions', async function (req, res) {
+  const userId = parseInt(req.params.userId, 10);
+  const groupId = parseInt(req.params.groupId, 10);
+
+  const roles = await getMany({
+    db,
+    query:
+      'SELECT DISTINCT p.code AS permission \
+    FROM role r JOIN user_role ur ON r.id = ur.RoleId LEFT JOIN role_permission rp ON r.id = rp.roleId LEFT JOIN permission p ON rp.permissionId = p.id \
+    WHERE ur.userId = ? AND p.groupId = ?',
+    params: [userId, groupId],
+  });
+
+  return res.status(200).json({
+    data: roles,
+    message: 'retrieve permissions successfully',
   });
 });
 

@@ -1,15 +1,17 @@
 const express = require('express');
 const crypto = require('crypto');
-const bcrypt = require('bcrypt');
 const jsonwebtoken = require('jsonwebtoken');
 
 const db = require('../database/connection');
-const { getOne, updateOne } = require('../database/query');
+const canAccessBy = require('../middlewares/auth');
+const { getOne, updateOne, getMany } = require('../database/query');
 const { mailService } = require('../services/mail.service');
+const { cacheService } = require('../services/cache.service');
+const permissionCode = require('../constants/permission-code');
 
 const router = express.Router();
 
-const getUserCredentials = ({ id, username }) => {
+const getUserCredentials = ({ id, username}) => {
   const jwtData = {
     id,
     username,
@@ -51,6 +53,8 @@ router.post('/login', async function (req, res) {
     });
 
     if (isPasswordValid) {
+      await cacheService.setOneUser(user.id);
+
       const token = getUserCredentials({
         id: user.id,
         username,
@@ -72,6 +76,12 @@ router.post('/login', async function (req, res) {
       message: 'error',
     });
   }
+});
+
+router.get('/authorization-test', canAccessBy(permissionCode.CanCreateUser, permissionCode.CanReadUser), async function (req, res) {
+  return res.status(200).json({
+    message: 'test authorization successfully',
+  });
 });
 
 router.post('/forgot-password', async function (req, res) {
