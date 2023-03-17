@@ -27,7 +27,7 @@ const executeTransaction = ({ db, queries }) => {
         resolve();
       } catch (error) {
         conn.rollback();
-        reject(error)
+        reject(error);
       } finally {
         conn.release();
       }
@@ -75,5 +75,5 @@ module.exports = {
   updateOne,
   executeQuery,
   executeTransaction,
-  create
+  create,
 };
