@@ -11,10 +11,11 @@ const permissionCode = require('../constants/permission-code');
 
 const router = express.Router();
 
-const getUserCredentials = ({ id, username}) => {
+const getUserCredentials = ({ id, username, passwordLastResetDate }) => {
   const jwtData = {
     id,
     username,
+    passwordLastResetDate
   };
 
   const jwtSecret = process.env.JWT_SECRET;
@@ -58,6 +59,7 @@ router.post('/login', async function (req, res) {
       const token = getUserCredentials({
         id: user.id,
         username,
+        passwordLastResetDate: user.passwordLastResetDate
       });
 
       return res.status(200).json({
@@ -78,11 +80,15 @@ router.post('/login', async function (req, res) {
   }
 });
 
-router.get('/authorization-test', canAccessBy(permissionCode.CanCreateUser, permissionCode.CanReadUser), async function (req, res) {
-  return res.status(200).json({
-    message: 'test authorization successfully',
-  });
-});
+router.get(
+  '/authorization-test',
+  canAccessBy(permissionCode.CanCreateUser, permissionCode.CanReadUser),
+  async function (req, res) {
+    return res.status(200).json({
+      message: 'test authorization successfully',
+    });
+  }
+);
 
 router.post('/forgot-password', async function (req, res) {
   try {
@@ -103,11 +109,11 @@ router.post('/forgot-password', async function (req, res) {
     const secretKey = crypto.randomBytes(32).toString('hex');
     const passwordResetToken = crypto.createHash('sha256').update(secretKey).digest('hex');
 
-    const passwordResetAt = new Date(Date.now() + 10 * 60 * 1000);
+    const passwordResetExpiration = new Date(Date.now() + 10 * 60 * 1000);
     const updateStatus = await updateOne({
       db,
-      query: 'update user set passwordResetToken = ?, passwordResetAt = ? where email = ?',
-      params: [passwordResetToken, passwordResetAt, email],
+      query: 'update user set passwordResetToken = ?, passwordResetExpiration = ? where email = ?',
+      params: [passwordResetToken, passwordResetExpiration, email],
     });
 
     if (updateStatus) {
@@ -138,8 +144,8 @@ router.post('/reset-password', async function (req, res) {
     const { email, passwordResetToken, newPassword } = req.body;
     const user = await getOne({
       db,
-      query: 'SELECT * FROM user WHERE email = ? AND passwordResetToken = ? AND passwordResetAt > ?',
-      params: [email, passwordResetToken, new Date()],
+      query: 'SELECT * FROM user WHERE email = ? AND passwordResetToken = ?',
+      params: [email, passwordResetToken],
     });
 
     if (!user) {
@@ -153,11 +159,18 @@ router.post('/reset-password', async function (req, res) {
 
     const updateStatus = await updateOne({
       db,
-      query: 'update user set password = ?, salt = ?, passwordResetToken = null, passwordResetAt = null where email = ?',
-      params: [hashedPassword, salt, email],
+      query:
+        'update user set password = ?, salt = ?, passwordResetToken = null, passwordResetExpiration = null, passwordLastResetDate = ? where email = ?',
+      params: [hashedPassword, salt, new Date(), email],
     });
 
     if (updateStatus) {
+      const loginedUser = await cacheService.getOneUser(user.id);
+
+      if (loginedUser) {
+        await cacheService.setOneUser(user.id);
+      }
+
       return res.status(200).json({
         message: 'reset password successfully',
       });

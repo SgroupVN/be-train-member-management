@@ -1,25 +1,53 @@
 const expireCache = require('expire-cache');
 const db = require('../database/connection');
-const { getMany } = require('../database/query');
+const { getMany, getOne } = require('../database/query');
 
 const cacheService = {
   async setOneUser(userId) {
-    const rolePermissions = await getMany({
-      db,
-      query:
-        'SELECT r.code AS role, p.code AS permission \
+    const userCache = expireCache.namespace('userCache');
+    const existingUserCache = await this.getOneUser(userId);
+    try {
+      userCache.remove(userId);
+      
+      const rolePermissions = await getMany({
+        db,
+        query:
+          'SELECT r.code AS role, p.code AS permission \
             FROM role r JOIN user_role ur ON r.id = ur.RoleId LEFT JOIN role_permission rp ON r.id = rp.roleId LEFT JOIN permission p ON rp.permissionId = p.id \
             WHERE ur.userId = ?',
-      params: userId,
-    });
+        params: userId,
+      });
 
-    const roles = Array.from(new Set(rolePermissions.map((item) => item.role)));
-    const permissions = Array.from(
-      new Set(rolePermissions.filter((item) => item.permission != null).map((item) => item.permission))
-    );
+      const user = await getOne({
+        db,
+        query: 'SELECT * FROM user WHERE id = ?',
+        params: [userId],
+      });
 
-    const userCache = expireCache.namespace('userCache');
-    userCache(`${userId}`, { roles, permissions }, process.env.JWT_EXPIRE_TIME);
+      const roles = Array.from(new Set(rolePermissions.map((item) => item.role)));
+      const permissions = Array.from(
+        new Set(rolePermissions.filter((item) => item.permission != null).map((item) => item.permission))
+      );
+
+      userCache(
+        `${userId}`,
+        { roles, permissions, passwordLastResetDate: user.passwordLastResetDate },
+        process.env.JWT_EXPIRE_TIME
+      );
+
+    } catch (err) {
+      if (existingUserCache) {
+        userCache(
+          `${userId}`,
+          {
+            roles: existingUserCache.roles,
+            permissions: existingUserCache.permissions,
+            passwordLastResetDate: existingUserCache.passwordLastResetDate,
+          },
+          process.env.JWT_EXPIRE_TIME
+        );
+      }
+    }
   },
   async getOneUser(userId) {
     const userCache = expireCache.namespace('userCache');
