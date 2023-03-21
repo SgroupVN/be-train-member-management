@@ -18,9 +18,13 @@ const canAccessBy = (...allowedPermissions) => {
       }
 
       const userCache = await cacheService.getOneUser(decoded.id);
-      
+
       if (!userCache || !userCache.permissions) {
         return res.sendStatus(403); // unauthorized
+      }
+
+      if (userCache.passwordLastResetDate && decoded.passwordLastResetDate != userCache.passwordLastResetDate) {
+        return res.sendStatus(401); // invalid token
       }
 
       const permissionArray = [...allowedPermissions];
