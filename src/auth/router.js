@@ -3,7 +3,7 @@ const crypto = require('crypto');
 const jsonwebtoken = require('jsonwebtoken');
 
 const db = require('../database/connection');
-const canAccessBy = require('../middlewares/auth');
+const { canAccessBy } = require('../middlewares/auth');
 const { getOne, updateOne } = require('../database/query');
 const { mailService } = require('../services/mail.service');
 const { cacheService } = require('../services/cache.service');

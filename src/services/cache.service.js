@@ -7,6 +7,7 @@ const cacheService = {
     const rolePermissions = await getMany({
       db,
       query:
+        // eslint-disable-next-line no-multi-str
         'SELECT r.code AS role, p.code AS permission \
             FROM role r JOIN user_role ur ON r.id = ur.RoleId LEFT JOIN role_permission rp ON r.id = rp.roleId LEFT JOIN permission p ON rp.permissionId = p.id \
             WHERE ur.userId = ?',
@@ -26,16 +27,14 @@ const cacheService = {
     if (!userCache) {
       return null;
     }
-    var data = userCache(`${userId}`);
-    return data;
+    return userCache(`${userId}`);
   },
   async getAllUser() {
     const userCache = expireCache.namespace('userCache');
     if (!userCache) {
       return null;
     }
-    var data = userCache();
-    return data;
+    return userCache();
   },
 };
 

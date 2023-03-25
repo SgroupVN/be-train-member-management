@@ -1,6 +1,6 @@
 const permissionCode = {
-    CanCreateUser: "CanCreateUser",
-    CanReadUser: "CanReadUser"
-}
+  CanCreateUser: 'CanCreateUser',
+  CanReadUser: 'CanReadUser',
+};
 
-module.exports = permissionCode
+module.exports = permissionCode;

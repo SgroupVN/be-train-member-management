@@ -17,7 +17,7 @@ router.get('/', async function (req, res) {
   });
 
   const groupPermissions = permissions.reduce((acc, obj) => {
-    let key = obj['groupDescription'];
+    const key = obj.groupDescription;
     if (!acc[key]) {
       acc[key] = [];
     }
