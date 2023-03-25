@@ -4,14 +4,14 @@ const jsonwebtoken = require('jsonwebtoken');
 
 const db = require('../database/connection');
 const canAccessBy = require('../middlewares/auth');
-const { getOne, updateOne, getMany } = require('../database/query');
+const { getOne, updateOne } = require('../database/query');
 const { mailService } = require('../services/mail.service');
 const { cacheService } = require('../services/cache.service');
 const permissionCode = require('../constants/permission-code');
 
 const router = express.Router();
 
-const getUserCredentials = ({ id, username}) => {
+const getUserCredentials = ({ id, username }) => {
   const jwtData = {
     id,
     username,
@@ -78,11 +78,15 @@ router.post('/login', async function (req, res) {
   }
 });
 
-router.get('/authorization-test', canAccessBy(permissionCode.CanCreateUser, permissionCode.CanReadUser), async function (req, res) {
-  return res.status(200).json({
-    message: 'test authorization successfully',
-  });
-});
+router.get(
+  '/authorization-test',
+  canAccessBy(permissionCode.CanCreateUser, permissionCode.CanReadUser),
+  async function (req, res) {
+    return res.status(200).json({
+      message: 'test authorization successfully',
+    });
+  }
+);
 
 router.post('/forgot-password', async function (req, res) {
   try {
@@ -115,7 +119,7 @@ router.post('/forgot-password', async function (req, res) {
         emailFrom: 'admin@gmail.com',
         emailTo: email,
         emailSubject: 'Reset password',
-        emailText: 'Here is your reset password token: ' + passwordResetToken,
+        emailText: `Here is your reset password token: ${passwordResetToken}`,
       });
 
       return res.status(200).json({

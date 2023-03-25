@@ -1,6 +1,6 @@
 const express = require('express');
 const db = require('../database/connection');
-const { getMany, getOne, executeTransaction, create } = require('../database/query');
+const { getMany } = require('../database/query');
 
 const router = express.Router();
 
@@ -9,6 +9,7 @@ router.get('/', async function (req, res) {
   const permissions = await getMany({
     db,
     query:
+      // eslint-disable-next-line no-multi-str
       'SELECT p.id AS permissionId, p.code AS permissionCode, p.description AS permissionDescription, pg.description AS groupDescription \
       FROM permission p \
       LEFT JOIN permission_group pg ON p.groupId = pg.id',
@@ -37,6 +38,7 @@ router.get('/group/:id', async function (req, res) {
   const permissions = await getMany({
     db,
     query:
+      // eslint-disable-next-line no-multi-str
       'SELECT p.id AS permissionId, p.code AS permissionCode, p.description AS permissionDescription \
       FROM permission p \
       WHERE p.groupId = ?',
