@@ -1,12 +1,12 @@
 const express = require('express');
-const db = require('../database/connection');
+const db = require('../database/knex-connection');
 const { getOne, executeTransaction, getMany } = require('../database/query');
 const { cacheService } = require('../services/cache.service');
 
 const router = express.Router();
 
 // Read all users with query params
-router.get('/', function (req, res) {
+router.get('/', async (req, res) => {
   const nameQuery = req.query.name;
   const builder = nameQuery
     ? db('user')
@@ -14,19 +14,13 @@ router.get('/', function (req, res) {
         .orWhereLike('email', [`%${nameQuery}%`])
         .orWhereLike('name', [`%${nameQuery}%`])
     : db('user');
-
-  builder
-    .then((users) => {
-      if (users.length === 0) {
-        return res.status(404).json({
-          message: 'Users could not be found',
-        });
-      }
-      return res.json(users);
-    })
-    .catch((err) => {
-      return res.status(500).json({ message: `Error when connect to mysql${err}` });
-    });
+  
+  try {
+    const users = await builder;
+    return res.json(users);
+  } catch (error) {
+    return res.status(500).json({ message: `Error when connect to mysql${err}` });
+  }
   // if (nameQuery) {
   //   const sql = 'SELECT * FROM user WHERE name LIKE ?';
 
@@ -50,22 +44,21 @@ router.get('/', function (req, res) {
 });
 
 // Read one user
-router.get('/:id', function (req, res) {
+router.get('/:id', async (req, res) => {
   const userId = parseInt(req.params.id, 10);
 
-  db('user')
-    .where('user.id', userId)
-    .then((users) => {
-      if (users.length === 0) {
-        return res.status(404).json({
-          message: 'User not found',
-        });
-      }
-      return res.json(users);
-    })
-    .catch(() => {
-      return res.status(500).json({ message: 'Error when connect to mysql' });
-    });
+  try {
+    const user = await db('user').where('user.id', userId).first();
+    if (user.length === 0) {
+      return res.status(404).json({
+        message: 'User not found',
+      });
+    }
+    return res.json(users);  
+  } catch {
+    return res.status(500).json({ message: 'Error when connect to mysql' });
+  }
+
   // const sql = 'SELECT * FROM user WHERE id = ?';
 
   // db.query(sql, [userId], (err, rows) => {
@@ -82,19 +75,18 @@ router.get('/:id', function (req, res) {
 });
 
 // Create one user
-router.post('/', function (req, res) {
-  const { name } = req.body;
-  const { age } = req.body;
-  const { username } = req.body;
+router.post('/', async (req, res) => {
+  const { name, age, username, email } = req.body;
   const gender = Boolean(req.body.gender);
-  const shouldAddUser = Boolean(name !== undefined && age !== undefined && gender !== undefined && username !== undefined);
+  const isValid = Boolean(name !== undefined && age !== undefined && gender !== undefined && email !== undefined);
 
-  if (shouldAddUser) {
-    db('user')
-      .insert({ name, age, username, gender })
-      .catch(() => {
-        return res.status(500).json({ message: 'Error when connect to mysql' });
-      });
+  if (isValid) {
+    try {
+      const user = await db('user').insert({ name, age, username, gender, email })
+      return res.json(user[0]);
+    } catch {
+      return res.status(500).json({ message: 'Error when connect to mysql' });
+    }
   } else {
     return res.status(400).json({
       message: 'Missing some stuffs bro',
@@ -117,34 +109,29 @@ router.post('/', function (req, res) {
 });
 
 // Update one user
-router.patch('/:id', function (req, res) {
+router.patch('/:id', async (req, res) => {
   const userId = parseInt(req.params.id, 10);
-  const { name } = req.body;
-  const { age } = req.body;
-  const { username } = req.body;
+  const { name, age, username, email } = req.body;
   const gender = Boolean(req.body.gender);
 
-  const isValid = Boolean(name !== undefined && age !== undefined && gender !== undefined && username !== undefined);
+  const isValid = Boolean(name !== undefined && age !== undefined && gender !== undefined && email !== undefined);
 
   if (isValid) {
-    db('user')
-      .where('user.id', userId)
-      .then((users) => {
-        if (users.length === 0) {
-          return res.status(404).json({
-            message: 'User could not be found',
-          });
-        }
-        db('user')
-          .where({ id: userId })
-          .update({ name, age, username, gender }, ['id', 'name', 'age', 'username'])
-          .then((results) => {
-            return res.json(results[0]);
-          });
-      })
-      .catch(() => {
-        return res.status(500).json({ message: 'Error when connect to mysql' });
-      });
+    try {
+      const user = await db('user').where('user.id', userId).first();
+      if(!user) {
+        return res.status(404).json({
+          message: 'User could not be found',
+        });
+      }
+      const response = await db('user')
+        .where({ id: userId })
+        .update({ name, age, username, gender, email }, ['id', 'name', 'age', 'username', 'email'])
+
+      return res.status(200).json({message: 'Update success'});
+    } catch (error) {
+      return res.status(500).json({ message: 'Error when connect to mysql' });
+    }
   } else {
     return res.status(400).json({
       message: 'Missing some stuffs bro',
@@ -178,28 +165,22 @@ router.patch('/:id', function (req, res) {
 });
 
 // Delete one user
-router.delete('/:id', function (req, res) {
+router.delete('/:id', async (req, res) => {
   const userId = parseInt(req.params.id, 10);
 
-  db('user')
-    .where('user.id', userId)
-    .then((users) => {
-      if (users.length === 0) {
-        return res.status(404).json({
-          message: 'User could not be found',
-        });
-      }
-      db('user')
-        .where({ id: userId })
-        .del()
-        .then((results) => {
-          return res.json(results);
-        });
-    })
-    .catch(() => {
-      return res.status(500).json({ message: 'Error when connect to mysql' });
-    });
+  try {
+    const user = await db('user').where('user.id', userId).first();
+    if(!user) {
+      return res.status(404).json({
+        message: 'User could not be found',
+      });
+    }
+    const response = await db('user').where({ id: userId }).del()
 
+    return res.json(response);
+  } catch (error) {
+    return res.status(500).json({ message: 'Error when connect to mysql' });
+  }
   // const sql = 'DELETE from user WHERE id=?';
   // db.query(sql, [userId], (err, result) => {
   //   if (err) {
@@ -247,7 +228,6 @@ router.post('/:id/assign-role', async function (req, res) {
       message: 'login success',
     });
   } catch (err) {
-    console.log(err);
     return res.status(400).json({ message: 'Error when update data' });
   }
 });
