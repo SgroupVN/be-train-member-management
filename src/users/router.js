@@ -14,12 +14,12 @@ router.get('/', async (req, res) => {
         .orWhereLike('email', [`%${nameQuery}%`])
         .orWhereLike('name', [`%${nameQuery}%`])
     : db('user');
-  
+
   try {
     const users = await builder;
     return res.json(users);
   } catch (error) {
-    return res.status(500).json({ message: `Error when connect to mysql${err}` });
+    return res.status(500).json({ message: `Error when connect to mysql` });
   }
   // if (nameQuery) {
   //   const sql = 'SELECT * FROM user WHERE name LIKE ?';
@@ -54,8 +54,8 @@ router.get('/:id', async (req, res) => {
         message: 'User not found',
       });
     }
-    return res.json(users);  
-  } catch {
+    return res.json(user);
+  } catch (error) {
     return res.status(500).json({ message: 'Error when connect to mysql' });
   }
 
@@ -82,9 +82,9 @@ router.post('/', async (req, res) => {
 
   if (isValid) {
     try {
-      const user = await db('user').insert({ name, age, username, gender, email })
+      const user = await db('user').insert({ name, age, username, gender, email });
       return res.json(user[0]);
-    } catch {
+    } catch (error) {
       return res.status(500).json({ message: 'Error when connect to mysql' });
     }
   } else {
@@ -119,16 +119,16 @@ router.patch('/:id', async (req, res) => {
   if (isValid) {
     try {
       const user = await db('user').where('user.id', userId).first();
-      if(!user) {
+      if (!user) {
         return res.status(404).json({
           message: 'User could not be found',
         });
       }
-      const response = await db('user')
+      await db('user')
         .where({ id: userId })
-        .update({ name, age, username, gender, email }, ['id', 'name', 'age', 'username', 'email'])
+        .update({ name, age, username, gender, email }, ['id', 'name', 'age', 'username', 'email']);
 
-      return res.status(200).json({message: 'Update success'});
+      return res.status(200).json({ message: 'Update success' });
     } catch (error) {
       return res.status(500).json({ message: 'Error when connect to mysql' });
     }
@@ -170,12 +170,12 @@ router.delete('/:id', async (req, res) => {
 
   try {
     const user = await db('user').where('user.id', userId).first();
-    if(!user) {
+    if (!user) {
       return res.status(404).json({
         message: 'User could not be found',
       });
     }
-    const response = await db('user').where({ id: userId }).del()
+    const response = await db('user').where({ id: userId }).del();
 
     return res.json(response);
   } catch (error) {

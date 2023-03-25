@@ -12,6 +12,7 @@ router.get('/:id', async function (req, res) {
   const permissions = await getMany({
     db,
     query:
+      // eslint-disable-next-line no-multi-str
       'SELECT p.id AS permissionId, p.code AS permissionCode \
     FROM role_permission rp \
     JOIN permission p ON rp.permissionId = p.id \
@@ -48,13 +49,11 @@ router.post('/', async function (req, res) {
       return res.status(200).json({
         message: 'success',
       });
-    } else {
-      return res.status(400).json({
-        message: 'Missing some stuffs bro',
-      });
     }
+    return res.status(400).json({
+      message: 'Missing some stuffs bro',
+    });
   } catch (err) {
-    console.log(err);
     return res.status(400).json({
       message: 'error when creating role',
     });
@@ -79,20 +78,24 @@ router.post('/:id/assign-permission', async function (req, res) {
       });
     }
 
+    // eslint-disable-next-line no-undef
     permissionsParams = permissions.map((x) => [role.id, x.id]);
 
     await executeTransaction({
-      db: db,
+      db,
       queries: [
         { query: 'delete from role_permission where roleId = ?', params: [role.id] },
+        // eslint-disable-next-line no-undef
         { query: 'insert into role_permission (roleId, permissionId) VALUES ?', params: [permissionsParams] },
       ],
     });
 
     const loginedUsers = await cacheService.getAllUser();
 
+    // eslint-disable-next-line no-restricted-syntax
     for (const [key, value] of Object.entries(loginedUsers)) {
       if (value.roles.includes(role.code)) {
+        // eslint-disable-next-line no-await-in-loop
         await cacheService.setOneUser(key);
       }
     }
