@@ -1,20 +1,13 @@
 const express = require('express');
-const db = require('../database/connection');
-const { getMany } = require('../database/query');
+const db = require('../database/knex-connection');
 
 const router = express.Router();
 
 // Read all permission
 router.get('/', async function (req, res) {
-  const permissions = await getMany({
-    db,
-    query:
-      // eslint-disable-next-line no-multi-str
-      'SELECT p.id AS permissionId, p.code AS permissionCode, p.description AS permissionDescription, pg.description AS groupDescription \
+  const permissions = await db.raw(`SELECT p.id AS permissionId, p.code AS permissionCode, p.description AS permissionDescription, pg.description AS groupDescription \
       FROM permission p \
-      LEFT JOIN permission_group pg ON p.groupId = pg.id',
-    params: [],
-  });
+      LEFT JOIN permission_group pg ON p.groupId = pg.id`);
 
   const groupPermissions = permissions.reduce((acc, obj) => {
     const key = obj.groupDescription;
@@ -35,15 +28,9 @@ router.get('/', async function (req, res) {
 router.get('/group/:id', async function (req, res) {
   const groupId = parseInt(req.params.id, 10);
 
-  const permissions = await getMany({
-    db,
-    query:
-      // eslint-disable-next-line no-multi-str
-      'SELECT p.id AS permissionId, p.code AS permissionCode, p.description AS permissionDescription \
+  const permissions = await db.raw(`SELECT p.id AS permissionId, p.code AS permissionCode, p.description AS permissionDescription \
       FROM permission p \
-      WHERE p.groupId = ?',
-    params: [groupId],
-  });
+      WHERE p.groupId = ?`, [groupId]);
 
   return res.status(200).json({
     data: permissions,
@@ -53,11 +40,7 @@ router.get('/group/:id', async function (req, res) {
 
 // read all permission group
 router.get('/groups', async function (req, res) {
-  const permissions = await getMany({
-    db,
-    query: 'SELECT DISTINCT * FROM  permission_group',
-    params: [],
-  });
+  const permissions = await db.raw(`SELECT DISTINCT * FROM  permission_group`);
 
   return res.status(200).json({
     data: permissions,

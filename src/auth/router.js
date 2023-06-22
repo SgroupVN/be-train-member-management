@@ -2,9 +2,8 @@ const express = require('express');
 const crypto = require('crypto');
 const jsonwebtoken = require('jsonwebtoken');
 
-const db = require('../database/connection');
+const db = require('../database/knex-connection');
 const { canAccessBy } = require('../middlewares/auth');
-const { getOne, updateOne } = require('../database/query');
 const { mailService } = require('../services/mail.service');
 const { cacheService } = require('../services/cache.service');
 const permissionCode = require('../constants/permission-code');
@@ -27,12 +26,7 @@ const getUserCredentials = ({ id, username }) => {
 router.post('/login', async function (req, res) {
   try {
     const { username } = req.body;
-
-    const user = await getOne({
-      db,
-      query: 'SELECT * FROM user WHERE username = ?',
-      params: [username],
-    });
+    const user = await db.raw(`SELECT * FROM user WHERE username = ?`, [username]);
 
     if (!user) {
       return res.status(404).json({
@@ -91,12 +85,7 @@ router.get(
 router.post('/forgot-password', async function (req, res) {
   try {
     const { email } = req.body;
-
-    const user = await getOne({
-      db,
-      query: 'SELECT * FROM user WHERE email = ?',
-      params: [email],
-    });
+    const user = await db.raw(`SELECT * FROM user WHERE email = ?`, [email]);
 
     if (!user) {
       return res.status(404).json({
@@ -108,11 +97,11 @@ router.post('/forgot-password', async function (req, res) {
     const passwordResetToken = crypto.createHash('sha256').update(secretKey).digest('hex');
 
     const passwordResetAt = new Date(Date.now() + 10 * 60 * 1000);
-    const updateStatus = await updateOne({
-      db,
-      query: 'update user set passwordResetToken = ?, passwordResetAt = ? where email = ?',
-      params: [passwordResetToken, passwordResetAt, email],
-    });
+    const updateStatus = await db.raw(`UPDATE user SET passwordResetToken = ?, passwordResetAt = ? WHERE email = ?`, [
+      passwordResetToken,
+      passwordResetAt,
+      email,
+      ]);
 
     if (updateStatus) {
       mailService.sendEmail({
@@ -140,11 +129,10 @@ router.post('/forgot-password', async function (req, res) {
 router.post('/reset-password', async function (req, res) {
   try {
     const { email, passwordResetToken, newPassword } = req.body;
-    const user = await getOne({
-      db,
-      query: 'SELECT * FROM user WHERE email = ? AND passwordResetToken = ? AND passwordResetAt > ?',
-      params: [email, passwordResetToken, new Date()],
-    });
+    const user = await db.raw(
+      `SELECT * FROM user WHERE email = ? AND passwordResetToken = ? AND passwordResetAt > ?`,
+      [email, passwordResetToken, new Date()]
+    );
 
     if (!user) {
       return res.status(403).json({
@@ -154,12 +142,10 @@ router.post('/reset-password', async function (req, res) {
 
     const salt = crypto.randomBytes(32).toString('hex');
     const hashedPassword = crypto.pbkdf2Sync(newPassword, salt, 10, 64, `sha512`).toString(`hex`);
-
-    const updateStatus = await updateOne({
-      db,
-      query: 'update user set password = ?, salt = ?, passwordResetToken = null, passwordResetAt = null where email = ?',
-      params: [hashedPassword, salt, email],
-    });
+    const updateStatus = await db.raw(
+      `UPDATE user SET password = ?, salt = ?, passwordResetToken = null, passwordResetAt = null WHERE email = ?`,
+      [hashedPassword, salt, email]
+    );
 
     if (updateStatus) {
       return res.status(200).json({
