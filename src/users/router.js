@@ -1,6 +1,5 @@
 const express = require('express');
 const db = require('../database/knex-connection');
-const { getOne, executeTransaction, getMany } = require('../database/query');
 const { cacheService } = require('../services/cache.service');
 
 const router = express.Router();
@@ -21,26 +20,6 @@ router.get('/', async (req, res) => {
   } catch (error) {
     return res.status(500).json({ message: `Error when connect to mysql` });
   }
-  // if (nameQuery) {
-  //   const sql = 'SELECT * FROM user WHERE name LIKE ?';
-
-  //   db.query(sql, [`%${nameQuery}%`], (err, rows) => {
-  //     if (err) {
-  //       return res.status(500).json({ message: 'Error when connect to mysql' });
-  //     }
-  //     return res.json(rows);
-  //   });
-  //   return;
-  // }
-  // // Get all
-  // const sql = 'SELECT * FROM user';
-  // db.query(sql, [nameQuery], (err, rows) => {
-  //   if (err) {
-  //     return res.status(500).json({ message: 'Error when connect to mysql' });
-  //   }
-
-  //   res.json(rows);
-  // });
 });
 
 // Read one user
@@ -58,20 +37,6 @@ router.get('/:id', async (req, res) => {
   } catch (error) {
     return res.status(500).json({ message: 'Error when connect to mysql' });
   }
-
-  // const sql = 'SELECT * FROM user WHERE id = ?';
-
-  // db.query(sql, [userId], (err, rows) => {
-  //   if (err) {
-  //     return res.status(500).json({ message: 'Error when connect to mysql' });
-  //   }
-  //   if (rows.length === 0) {
-  //     return res.status(404).json({
-  //       message: 'User not found',
-  //     });
-  //   }
-  //   return res.json(rows[0]);
-  // });
 });
 
 // Create one user
@@ -137,31 +102,6 @@ router.patch('/:id', async (req, res) => {
       message: 'Missing some stuffs bro',
     });
   }
-
-  // const user = allUsers.find((user) => user.id === userId);
-  // const { name } = req.body;
-  // const { age } = req.body;
-  // const gender = Boolean(req.body.gender);
-
-  // const sql = 'SELECT * FROM user WHERE id = ?';
-  // db.query(sql, [userId], (err, rows) => {
-  //   if (err) {
-  //     return res.status(500).json({ message: 'Error when connect to mysql' });
-  //   }
-  //   if (rows.length === 0) {
-  //     return res.status(404).json({
-  //       message: 'User not found',
-  //     });
-  //   }
-  //   const updateSql = 'UPDATE user SET name=?,age=?,gender=? where id=?';
-  //   db.query(updateSql, [name, age, gender, userId], (updateErr, results) => {
-  //     if (updateErr) {
-  //       return res.status(400).json({ message: 'Error when update data' });
-  //     }
-
-  //     return res.json(results);
-  //   });
-  // });
 });
 
 // Delete one user
@@ -181,13 +121,6 @@ router.delete('/:id', async (req, res) => {
   } catch (error) {
     return res.status(500).json({ message: 'Error when connect to mysql' });
   }
-  // const sql = 'DELETE from user WHERE id=?';
-  // db.query(sql, [userId], (err, result) => {
-  //   if (err) {
-  //     return res.status(400).json({ message: 'Error when update data' });
-  //   }
-  //   return res.json(result);
-  // });
 });
 
 // Assign role to user
@@ -196,11 +129,7 @@ router.post('/:id/assign-role', async function (req, res) {
     const userId = parseInt(req.params.id, 10);
     const { roles } = req.body;
 
-    const user = await getOne({
-      db,
-      query: 'SELECT * FROM user WHERE id = ?',
-      params: [userId],
-    });
+    const user = await db.raw('SELECT * FROM user WHERE id = ?', [userId]).first();
 
     if (!user) {
       return res.status(404).json({
@@ -210,13 +139,13 @@ router.post('/:id/assign-role', async function (req, res) {
 
     const roleParmas = roles.map((x) => [user.id, x.id]);
 
-    await executeTransaction({
-      db,
-      queries: [
-        { query: 'delete from user_role where userId = ?', params: [user.id] },
-        { query: 'insert into user_role (userId, roleId) VALUES ?', params: [roleParmas] },
-      ],
-    });
+    await db.transaction(
+      async (trx) => {
+        await trx.raw('delete from user_role where userId = ?', [user.id]);
+        await trx.raw('insert into user_role (userId, roleId) VALUES ?', [roleParmas]);
+      },
+      { autocommit: false },
+    );
 
     const loginedUser = await cacheService.getOneUser(userId);
 
@@ -236,15 +165,9 @@ router.post('/:id/assign-role', async function (req, res) {
 router.get('/:id/roles', async function (req, res) {
   const userId = parseInt(req.params.id, 10);
 
-  const roles = await getMany({
-    db,
-    query:
-      // eslint-disable-next-line no-multi-str
-      'SELECT ro.id, ro.description from role ro \
+  const roles = await db.raw(`SELECT ro.id, ro.description from role ro \
       JOIN user_role ur ON ro.id = ur.roleId \
-      WHERE userId = ?',
-    params: userId,
-  });
+      WHERE userId = ?`, [userId]);
 
   return res.status(200).json({
     data: roles,
@@ -257,15 +180,9 @@ router.get('/:userId/permission-group/:groupId/permissions', async function (req
   const userId = parseInt(req.params.userId, 10);
   const groupId = parseInt(req.params.groupId, 10);
 
-  const roles = await getMany({
-    db,
-    query:
-      // eslint-disable-next-line no-multi-str
-      'SELECT DISTINCT p.code AS permission \
+  const roles = await db.raw(`SELECT DISTINCT p.code AS permission \
     FROM role r JOIN user_role ur ON r.id = ur.RoleId LEFT JOIN role_permission rp ON r.id = rp.roleId LEFT JOIN permission p ON rp.permissionId = p.id \
-    WHERE ur.userId = ? AND p.groupId = ?',
-    params: [userId, groupId],
-  });
+    WHERE ur.userId = ? AND p.groupId = ?`, [userId, groupId]);
 
   return res.status(200).json({
     data: roles,

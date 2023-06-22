@@ -1,0 +1,40 @@
+version: '3.5'
+services:
+  be-training:
+    build: .
+    image: dangphu2412/be-training
+    container_name: be-training-container
+    # command: npm start
+    environment:
+      - POSTGRES_HOST=postgres
+      - REDIS_HOST=redis
+    ports:
+      - '3000:3000'
+    depends_on:
+      - postgres
+    volumes:
+      - .:/var/www
+    networks:
+      - node-network
+
+  postgres:
+    container_name: postgres_container
+    image: postgres
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-nestdb}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme}
+    volumes:
+      - dbdata:/data/postgres
+    ports:
+      - 5432:5432
+    networks:
+      - node-network
+
+volumes:
+  dbdata:
+  node_modules:
+
+networks:
+  node-network:
+    driver: bridge
