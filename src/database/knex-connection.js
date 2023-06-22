@@ -1,7 +1,7 @@
 const knex = require('knex');
 
 const knexConnection = knex({
-  client: process.env.DB_DRIVER ?? 'mysql',
+  client: process.env.DB_DRIVER || 'mysql',
   connection: {
     host: process.env.DB_HOST,
     port: process.env.DB_PORT,
@@ -15,7 +15,7 @@ const knexConnection = knex({
   pool: {
     max: 7,
     min: 3,
-  }
+  },
 });
 
 module.exports = knexConnection;

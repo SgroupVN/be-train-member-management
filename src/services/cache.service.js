@@ -3,10 +3,13 @@ const db = require('../database/knex-connection');
 
 const cacheService = {
   async setOneUser(userId) {
-    const rolePermissions = await db.raw( `
+    const rolePermissions = await db.raw(
+      `
         SELECT r.code AS role, p.code AS permission \
         FROM role r JOIN user_role ur ON r.id = ur.RoleId LEFT JOIN role_permission rp ON r.id = rp.roleId LEFT JOIN permission p ON rp.permissionId = p.id \
-        WHERE ur.userId = ?`, [userId]);
+        WHERE ur.userId = ?`,
+      [userId]
+    );
 
     const roles = Array.from(new Set(rolePermissions.map((item) => item.role)));
     const permissions = Array.from(

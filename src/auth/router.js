@@ -101,7 +101,7 @@ router.post('/forgot-password', async function (req, res) {
       passwordResetToken,
       passwordResetAt,
       email,
-      ]);
+    ]);
 
     if (updateStatus) {
       mailService.sendEmail({
@@ -129,10 +129,11 @@ router.post('/forgot-password', async function (req, res) {
 router.post('/reset-password', async function (req, res) {
   try {
     const { email, passwordResetToken, newPassword } = req.body;
-    const user = await db.raw(
-      `SELECT * FROM user WHERE email = ? AND passwordResetToken = ? AND passwordResetAt > ?`,
-      [email, passwordResetToken, new Date()]
-    );
+    const user = await db.raw(`SELECT * FROM user WHERE email = ? AND passwordResetToken = ? AND passwordResetAt > ?`, [
+      email,
+      passwordResetToken,
+      new Date(),
+    ]);
 
     if (!user) {
       return res.status(403).json({

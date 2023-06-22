@@ -144,7 +144,7 @@ router.post('/:id/assign-role', async function (req, res) {
         await trx.raw('delete from user_role where userId = ?', [user.id]);
         await trx.raw('insert into user_role (userId, roleId) VALUES ?', [roleParmas]);
       },
-      { autocommit: false },
+      { autocommit: false }
     );
 
     const loginedUser = await cacheService.getOneUser(userId);
@@ -165,9 +165,12 @@ router.post('/:id/assign-role', async function (req, res) {
 router.get('/:id/roles', async function (req, res) {
   const userId = parseInt(req.params.id, 10);
 
-  const roles = await db.raw(`SELECT ro.id, ro.description from role ro \
+  const roles = await db.raw(
+    `SELECT ro.id, ro.description from role ro \
       JOIN user_role ur ON ro.id = ur.roleId \
-      WHERE userId = ?`, [userId]);
+      WHERE userId = ?`,
+    [userId]
+  );
 
   return res.status(200).json({
     data: roles,
@@ -180,9 +183,12 @@ router.get('/:userId/permission-group/:groupId/permissions', async function (req
   const userId = parseInt(req.params.userId, 10);
   const groupId = parseInt(req.params.groupId, 10);
 
-  const roles = await db.raw(`SELECT DISTINCT p.code AS permission \
+  const roles = await db.raw(
+    `SELECT DISTINCT p.code AS permission \
     FROM role r JOIN user_role ur ON r.id = ur.RoleId LEFT JOIN role_permission rp ON r.id = rp.roleId LEFT JOIN permission p ON rp.permissionId = p.id \
-    WHERE ur.userId = ? AND p.groupId = ?`, [userId, groupId]);
+    WHERE ur.userId = ? AND p.groupId = ?`,
+    [userId, groupId]
+  );
 
   return res.status(200).json({
     data: roles,

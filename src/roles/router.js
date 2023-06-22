@@ -1,16 +1,20 @@
 const express = require('express');
 const { cacheService } = require('../services/cache.service');
 const db = require('../database/knex-connection');
+
 const router = express.Router();
 
 // Read role_permission
 router.get('/:id', async function (req, res) {
   const roleId = parseInt(req.params.id, 10);
 
-  const permissions = await db.raw(`SELECT p.id AS permissionId, p.code AS permissionCode \
+  const permissions = await db.raw(
+    `SELECT p.id AS permissionId, p.code AS permissionCode \
     FROM role_permission rp \
     JOIN permission p ON rp.permissionId = p.id \
-    WHERE roleId = ?`, [roleId]);
+    WHERE roleId = ?`,
+    [roleId]
+  );
 
   return res.status(200).json({
     data: permissions,
@@ -63,7 +67,7 @@ router.post('/:id/assign-permission', async function (req, res) {
     }
 
     // eslint-disable-next-line no-undef
-    permissionsParams = permissions.map((x) => [role.id, x.id]);
+    const permissionsParams = permissions.map((x) => [role.id, x.id]);
 
     await db.transaction(async (trx) => {
       await trx.raw('delete from role_permission where roleId = ?', [role.id]);
